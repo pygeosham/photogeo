@@ -1,6 +1,6 @@
 # photogeo 
 
-## ジオタグ付き画像を投稿すると結果がwebmapに表示される..というものを GoogleForms & Google Spredsheet を用いて作成したものです
+## ジオタグ付き画像を投稿すると結果がwebmapに表示される..というしくみを GoogleForms & Google Spredsheet を用いて作成したものです
 
 + **作成の目的：** 画像撮影 → webmap化をリアルタイムで実現したい
 + **想定するユーザ：** google forms をつくれるよ,ってぐらいのPCユーザ
@@ -24,7 +24,7 @@
 
 ---
 
-## map_from_gsheet.html & constans.js
+## map_from_gsheet.html & constants.js
 ### Google Spredsheet に格納された位置情報(lat,lon)と各種の情報をもとに webmap にプロット
 + leaflet & OSM で作成
 + 元ネタは[この記事](https://qiita.com/marronest/items/4dcd753fb2b23f31666e)
