@@ -9,6 +9,7 @@
   + **1)** GoogleFormsに**photogeo_from_gforms.gs** を仕込むことで，投稿されたジオタグ付き画像から位置情報を抽出する
   + **2)** 1)の投稿結果を位置情報とともにgoogle spredsheetに記録する
   + **3)** 2)を参照した leaflet ベースの webmap を **map_from_gsheet.html** で表示する 
+  ![map表示サンプル](https://github.com/pygeosham/photogeo/blob/images/mapview_sample.png "map表示サンプル") 
   + **注意：** googleのアカウントにログインしたのち投稿するので**投稿画像のファイル名には投稿ユーザ名がサフィックスとして付与されます**。
     + こんな感じ → hogehoge_**username**.jpg
 
