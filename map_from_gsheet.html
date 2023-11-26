@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>webmap_from_spredsheet</title>
+    <style>
+      #map {
+        height: 100%;
+      }
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      .sidebar {
+        width: 250px;
+        height: 250px;
+        border: 1px solid #666;
+        padding: 6px;
+        background-color: white;
+        font-family: Meriyo UI;
+        font-size: 14px;
+        overflow-y: scroll;
+      }
+
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <div id="sidebar"></div>
+    <script src="constants.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    crossorigin=""></script>
+    <script>
+      var map;
+      var marker = [];
+        
+      function parseData(data) {
+        var keys = data.values[0];
+        var markerData = [];
+        data.values.forEach(function(value, i) {
+          if (i > 0) {
+            var hash = {};
+            value.forEach(function(d, j) {
+              hash[keys[j]] = d;
+            });
+            markerData.push(hash);
+          }
+        });
+        return markerData;
+      }
+
+      var target = document.getElementById('map');   
+      //初期の地図の中心を指定(新宿駅) 35.6896067,139.7005713
+      var centerp = {lat: 35.6896067, lng: 139.7005713};
+        
+      map = L.map(target, {
+          center: centerp,
+          zoom: 14
+      });
+        
+      var tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: 'c <a href="http://osm.org/copyright">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>',
+      });
+      tileLayer.addTo(map);
+        
+      map.zoomControl.setPosition("topright");
+      
+      var sidebar = L.control({ position: "bottomright" });
+      sidebar.onAdd = function (map) {
+        this.ele = L.DomUtil.create('div', "sidebar");
+        this.ele.id = "sidebardiv";
+        return this.ele;
+      };
+      sidebar.addTo(map);
+
+      var div = L.DomUtil.get('sidebardiv');
+      L.DomEvent.disableClickPropagation(div);
+      L.DomEvent.on(div, 'mousewheel', L.DomEvent.stopPropagation);
+
+      var request = new XMLHttpRequest();
+      request.open('GET', `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}`, true);
+      request.responseType = 'json';
+
+      request.onload = function () {
+        var data = this.response;
+        console.log(data);
+        var markerData = parseData(data);
+        console.log(markerData);
+        setData(markerData);
+      };
+
+      request.send();
+        
+      function addMarker(i, data) {
+        var markerLatLng = L.latLng({
+            lat: Number(data['lat']),
+            lng: Number(data['lon'])
+        });
+		
+        //画像idの取得
+		//forms→spredsheetに記録された画像のgoogledriveのURLを抽出
+		var gimglink = data['画像ファイルの指定'];
+		//画像URLから画像id部のみを取り出す(=より後ろの文字列を抽出)
+		var imgcontents = gimglink.substr(gimglink.indexOf('=') + 1);
+		//preview表示可能なURLに変換
+		//ベースのURL
+		var imgURL = "http://drive.google.com/uc?export=view&id=";
+		//ベースのURLに画像idを結合しpreview可能なURLを生成
+        var driveURL = imgURL + imgcontents;
+		
+		//ポップアップに画像をpreview表示させる場合(JPEGで記録されている場合)
+		//画像をHTMLで記述する(描画が超遅いけどまずは単純にこれで書いてみる)
+		//googledriveに格納された画像へのリンクとpreviewを表示させる
+        var ppimgContents = '<div style="font-size:16px;font-weight:bold;margin-bottom:10px;">' + '<a href="' + data['画像ファイルの指定'] + '" target=_blank>' + data['タイトル'] + ":" + data['解説'] + '</a><br><img src="' + driveURL + '" width="250">'　+ '</div>';
+		var popup = L.popup().setContent(ppimgContents);
+		
+		//画像がHEICのみだった場合
+		//ポップアップにはとりあえずリンクを貼るだけにしておく 
+        //var popupContents = '<div style="font-size:16px;font-weight:bold;margin-bottom:10px;">' + '<a href="' + data['画像ファイルの指定'] + '" target=_blank>' + data['タイトル'] + ":" + data['解説'] + '</a>' + '</div>';
+        //var popup = L.popup().setContent(popupContents);
+		
+        //zoomlevelを指定したい場合はflytoのオプションを指定する  
+        marker[i] = L.marker(markerLatLng).bindPopup(popup).on('click',function(ele){ map.flyTo(ele.latlng); }).addTo(map);
+      }
+
+      function setData(markerData){
+        var sidebar_html = "";
+        for (var i = 0; i < markerData.length; i++) {
+            var latitude = markerData[i]['lat'];
+            if (!latitude) { continue; }
+            addMarker(i, markerData[i]);
+			var v_title = markerData[i]['タイトル'];//タイトル列の情報を抽出し変数 v_title に入力			
+            var v_kaisetsu = markerData[i]['解説'];//解説列の情報を抽出し変数 v_kaisetsu に代入
+            
+            sidebar_html += `<b>${i + 1}</b> <a href="javascript:popupOn(${i})"><b>${v_title}</b>:${v_kaisetsu}<\/a><br />`;
+        }
+        //href="" にformsのURLを記述する  
+        document.getElementById("sidebardiv").innerHTML = `<a target="_blank" href="${FORMS_URL}">データ登録フォーム</a><br /><a target="_blank" href="https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit?usp=sharing">参照スプレッドシート(随時更新)</a><br /><br />` + sidebar_html;
+      }
+        
+      function popupOn(i) {
+        var latlng=marker[i].getLatLng();
+        //zoomlevelを指定したい場合はflytoのオプションを指定する
+        map.flyTo(latlng);
+        marker[i].openPopup();
+      }
+    </script>
+  </body>
+</html>
+
